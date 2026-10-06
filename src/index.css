@@ -1,0 +1,356 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    /* Emergency Triad Palette */
+    --color-red: #ef4444;
+    --color-yellow: #facc15;
+    --color-green: #10b981;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #050811;
+    color: #f8fafc;
+  }
+}
+
+/* Custom Tactical Grid */
+.tactical-grid {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.tactical-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
+/* Double-Bezel Hardware Architecture */
+.double-bezel-shell {
+  background: rgba(10, 15, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 0.375rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.double-bezel-core {
+  background: rgba(8, 12, 22, 0.95);
+  border-radius: calc(1.25rem - 0.375rem);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Red, Green & Yellow Tactical Glows */
+.glow-red {
+  box-shadow: 0 0 24px -2px rgba(239, 68, 68, 0.45);
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+.glow-yellow {
+  box-shadow: 0 0 24px -2px rgba(250, 204, 21, 0.45);
+  border-color: rgba(250, 204, 21, 0.5) !important;
+}
+
+.glow-green {
+  box-shadow: 0 0 24px -2px rgba(16, 185, 129, 0.45);
+  border-color: rgba(16, 185, 129, 0.5) !important;
+}
+
+/* Radar Pulse Animations */
+@keyframes radar-pulse-red {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(2.5); opacity: 0; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes radar-pulse-yellow {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(2.3); opacity: 0; }
+  100% { transform: scale(2.3); opacity: 0; }
+}
+
+@keyframes radar-pulse-green {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes beacon-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-radar-red {
+  animation: radar-pulse-red 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.animate-radar-yellow {
+  animation: radar-pulse-yellow 2.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.animate-radar-green {
+  animation: radar-pulse-green 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.animate-beacon {
+  animation: beacon-sweep 4s linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(8, 12, 22, 0.9);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Leaflet Tactical Styling */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #080c16 !important;
+  font-family: inherit !important;
+}
+
+.dark-tiles .leaflet-tile {
+  filter: brightness(0.68) invert(1) contrast(3) hue-rotate(200deg) saturate(0.25);
+}
+
+.leaflet-popup-content-wrapper {
+  background: #090e1c !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #090e1c !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ========================================================
+   LIGHT MODE DESIGN SYSTEM
+   Professional Government & Hospital EOC Clean Aesthetic
+   ======================================================== */
+
+.light-mode {
+  color-scheme: light;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.light-mode body {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Light Mode Tactical Grids */
+.light-mode .tactical-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+}
+
+.light-mode .tactical-dots {
+  background-image: radial-gradient(circle, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+}
+
+/* Light Mode Double-Bezel Hardware Architecture */
+.light-mode .double-bezel-shell {
+  background: rgba(226, 232, 240, 0.85) !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.light-mode .double-bezel-core {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02) !important;
+  color: #0f172a !important;
+}
+
+/* Light Mode Midnight Surface Overrides */
+.light-mode [class*="bg-[#060a14]"],
+.light-mode [class*="bg-[#060a16]"],
+.light-mode [class*="bg-[#050811]"],
+.light-mode [class*="bg-[#050812]"],
+.light-mode [class*="bg-[#070c18]"],
+.light-mode [class*="bg-[#070b16]"],
+.light-mode [class*="bg-[#080d1b]"],
+.light-mode [class*="bg-[#090f1d]"],
+.light-mode [class*="bg-[#090f1e]"],
+.light-mode [class*="bg-[#0a101f]"],
+.light-mode [class*="bg-[#0c1426]"],
+.light-mode [class*="bg-[#02050c]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light-mode header {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-bottom-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+}
+
+.light-mode aside {
+  background-color: #f8fafc !important;
+  border-right-color: #e2e8f0 !important;
+}
+
+.light-mode main {
+  background-color: #f1f5f9 !important;
+}
+
+/* Light Mode Typography Adjustments */
+.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+.light-mode .text-slate-100 {
+  color: #0f172a !important;
+}
+
+.light-mode .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.light-mode .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light-mode .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* Light Mode Borders & Sub-surfaces */
+.light-mode .border-white\/10,
+.light-mode .border-white\/15,
+.light-mode .border-white\/5,
+.light-mode .border-white\/20 {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .bg-white\/5,
+.light-mode .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+.light-mode .bg-slate-900,
+.light-mode [class*="bg-slate-900"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light-mode .bg-slate-800,
+.light-mode [class*="bg-slate-800"] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Form Inputs in Light Mode */
+.light-mode input,
+.light-mode textarea,
+.light-mode select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Light Mode Scrollbars */
+.light-mode ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light-mode ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Light Mode Leaflet Enhancements */
+.light-mode .leaflet-container {
+  background: #e2e8f0 !important;
+}
+
+.light-mode .leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+.light-mode .leaflet-popup-tip {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+/* High Contrast Red, Green, Yellow in Light Mode */
+.light-mode .bg-red-950,
+.light-mode [class*="bg-red-950"] {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+}
+
+.light-mode .bg-amber-950,
+.light-mode [class*="bg-amber-950"],
+.light-mode [class*="bg-yellow-950"] {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fcd34d !important;
+}
+
+.light-mode .bg-emerald-950,
+.light-mode [class*="bg-emerald-950"] {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.light-mode .text-red-400 {
+  color: #dc2626 !important;
+}
+
+.light-mode .text-amber-400,
+.light-mode .text-yellow-400 {
+  color: #b45309 !important;
+}
+
+.light-mode .text-emerald-400 {
+  color: #059669 !important;
+}
