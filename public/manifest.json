@@ -1,0 +1,20 @@
+{
+  "short_name": "RESQ",
+  "name": "RESQ — Smart Emergency Response",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#060a14",
+  "theme_color": "#ef4444",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "description": "Smart Emergency Response, Real-Time Location Triage, Hospital & First Responder Coordination Platform",
+  "categories": ["utilities", "medical", "productivity"]
+}
