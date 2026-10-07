@@ -33,7 +33,42 @@ export const CitizenMobileView: React.FC<CitizenMobileViewProps> = ({
   lang
 }) => {
   const [activeTab, setActiveTab] = useState<'home' | 'report' | 'alerts' | 'tracking' | 'profile'>('home');
+  const [currentAddress, setCurrentAddress] = useState<string>('Anna Salai, T Nagar, Chennai, Tamil Nadu');
+  const [isLocating, setIsLocating] = useState<boolean>(false);
   const t = translations[lang] || translations.en;
+
+  const refreshLocation = () => {
+    setIsLocating(true);
+    soundManager.playPing();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.display_name) {
+                const parts = data.display_name.split(', ');
+                setCurrentAddress(parts.slice(0, 4).join(', '));
+                soundManager.playSuccess();
+              }
+            }
+          } catch {}
+          setIsLocating(false);
+        },
+        () => {
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setIsLocating(false);
+    }
+  };
+
+  React.useEffect(() => {
+    refreshLocation();
+  }, []);
 
   const citizenIncidents = incidents.filter(i => i.source === 'citizen_app');
 
@@ -93,13 +128,25 @@ export const CitizenMobileView: React.FC<CitizenMobileViewProps> = ({
               <div className="double-bezel-core p-4 space-y-2 font-mono text-xs">
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="flex items-center gap-1.5 font-bold uppercase text-white">
-                    <MapPin className="w-4 h-4 text-red-500" />
+                    <MapPin className="w-4 h-4 text-red-500 animate-bounce" />
                     My Current Location
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-bold">● GPS ACCURACY: 4M</span>
+                  <button
+                    onClick={refreshLocation}
+                    disabled={isLocating}
+                    className="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <span>{isLocating ? 'Locating...' : '● GPS ACTIVE (Refresh)'}</span>
+                  </button>
                 </div>
-                <div className="text-slate-200 text-xs">
-                  Anna Salai, T Nagar, Chennai, Tamil Nadu
+                <div className="text-slate-200 text-xs font-sans font-medium flex items-center justify-between">
+                  <span>📍 {currentAddress}</span>
+                  <button 
+                    onClick={onOpenReport}
+                    className="text-[10px] text-cyan-400 hover:text-cyan-300 font-mono underline ml-2 shrink-0"
+                  >
+                    Change Pin
+                  </button>
                 </div>
               </div>
             </div>

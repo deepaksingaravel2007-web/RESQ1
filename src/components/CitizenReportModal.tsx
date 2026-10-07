@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { 
   X, 
   Flame, 
@@ -22,14 +23,19 @@ import {
   Hospital, 
   PhoneCall, 
   Share2,
-  Navigation
+  Navigation,
+  Search,
+  Crosshair,
+  Edit3,
+  RotateCcw,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { IncidentTimelineEvent, EmergencyType, SeverityLevel, Incident, LanguageCode } from '../types';
 import { soundManager } from '../utils/audio';
 import { speakText, stopSpeech } from '../utils/speech';
 import { translations } from '../data/mockData';
 import { triageCitizenReportWithGemini } from '../services/geminiService';
-import { Sparkles, Loader2 } from 'lucide-react';
 
 interface CitizenReportModalProps {
   isOpen: boolean;
@@ -54,9 +60,194 @@ export const CitizenReportModal: React.FC<CitizenReportModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [peopleAffected, setPeopleAffected] = useState<string>('1');
   const [severity, setSeverity] = useState<SeverityLevel>('critical');
+  
+  // Real-time Editable Location State
   const [address, setAddress] = useState<string>('Anna Salai, T Nagar, Chennai, Tamil Nadu');
   const [latLng, setLatLng] = useState<{ lat: number; lng: number }>({ lat: 13.0418, lng: 80.2341 });
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
+  const [locationStatus, setLocationStatus] = useState<string>('GPS LOCKED');
+  
+  // Mini Map Refs
+  const miniMapContainerRef = useRef<HTMLDivElement>(null);
+  const miniMapInstanceRef = useRef<L.Map | null>(null);
+  const miniMarkerRef = useRef<L.Marker | null>(null);
+
+  // Popular Rapid-Pick Sector Presets
+  const locationPresets = [
+    { label: 'T. Nagar Hub', address: 'Anna Salai, T Nagar, Chennai', lat: 13.0418, lng: 80.2341 },
+    { label: 'Marina Beach', address: 'Kamarajar Salai, Marina Beach, Chennai', lat: 13.0500, lng: 80.2824 },
+    { label: 'Velachery', address: 'Velachery Main Road, Chennai', lat: 12.9815, lng: 80.2180 },
+    { label: 'Guindy Ind.', address: 'GST Road, Guindy, Chennai', lat: 13.0067, lng: 80.2026 },
+    { label: 'OMR Corridor', address: 'Rajiv Gandhi Salai, OMR, Chennai', lat: 12.9150, lng: 80.2280 },
+    { label: 'Koyambedu CMBT', address: 'Jawaharlal Nehru Road, Koyambedu, Chennai', lat: 13.0694, lng: 80.1948 },
+    { label: 'Chennai Central', address: 'EVR Periyar Salai, Chennai Central', lat: 13.0827, lng: 80.2707 },
+    { label: 'Airport Metro', address: 'Meenambakkam, Chennai Airport', lat: 12.9941, lng: 80.1709 },
+  ];
+
+  // Reverse Geocode using OpenStreetMap Nominatim
+  const reverseGeocode = async (lat: number, lng: number) => {
+    setIsGeocoding(true);
+    setLocationStatus('LOOKING UP ADDRESS...');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.display_name) {
+          const parts = data.display_name.split(', ');
+          const cleanAddr = parts.slice(0, 4).join(', ');
+          setAddress(cleanAddr || data.display_name);
+          setLocationStatus('GPS LOCKED');
+          setIsGeocoding(false);
+          return;
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+    setAddress(`Pinned Sector (${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E)`);
+    setLocationStatus('COORDINATES LOCKED');
+    setIsGeocoding(false);
+  };
+
+  // Forward Geocode user typed address
+  const handleSearchLocation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = address.trim();
+    if (!query) return;
+    setIsGeocoding(true);
+    setLocationStatus('LOCATING SECTOR...');
+    soundManager.playPing();
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data[0]) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          setLatLng({ lat, lng });
+          const parts = data[0].display_name.split(', ');
+          setAddress(parts.slice(0, 4).join(', '));
+          setLocationStatus('LOCATION MATCHED');
+          soundManager.playSuccess();
+          setIsGeocoding(false);
+          return;
+        }
+      }
+    } catch {}
+    setLocationStatus('CUSTOM ADDRESS SET');
+    setIsGeocoding(false);
+  };
+
+  // Quick Preset Selection
+  const handleSelectPreset = (p: typeof locationPresets[0]) => {
+    soundManager.playPing();
+    setAddress(p.address);
+    setLatLng({ lat: p.lat, lng: p.lng });
+    setLocationStatus('PRESET SECTOR');
+  };
+
+  // Geolocation Handler
+  const handleUseCurrentLocation = () => {
+    setIsLocating(true);
+    setLocationStatus('ACQUIRING GPS LOCK...');
+    soundManager.playPing();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setLatLng({ lat, lng });
+          soundManager.playSuccess();
+          setIsLocating(false);
+          await reverseGeocode(lat, lng);
+        },
+        () => {
+          setIsLocating(false);
+          setLocationStatus('GPS TIMEOUT - PLEASE TYPE OR TAP MAP');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setIsLocating(false);
+      setLocationStatus('GPS UNAVAILABLE');
+    }
+  };
+
+  // Mini Map Initializer for Step 2
+  useEffect(() => {
+    if (step !== 2 || !miniMapContainerRef.current) return;
+    if (miniMapInstanceRef.current) {
+      miniMapInstanceRef.current.invalidateSize();
+      return;
+    }
+
+    const map = L.map(miniMapContainerRef.current, {
+      center: [latLng.lat, latLng.lng],
+      zoom: 14,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18
+    }).addTo(map);
+
+    const icon = L.divIcon({
+      html: `<div class="relative flex items-center justify-center pointer-events-none">
+        <div class="absolute w-8 h-8 rounded-full bg-red-500/50 animate-ping"></div>
+        <div class="w-8 h-8 rounded-full bg-red-600 border-2 border-white text-white flex items-center justify-center shadow-2xl font-bold text-xs ring-4 ring-red-950/80">📍</div>
+      </div>`,
+      className: '',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const marker = L.marker([latLng.lat, latLng.lng], { icon, draggable: true }).addTo(map);
+    miniMarkerRef.current = marker;
+
+    // Drag marker event
+    marker.on('dragend', (e) => {
+      const pos = e.target.getLatLng();
+      setLatLng({ lat: pos.lat, lng: pos.lng });
+      soundManager.playPing();
+      reverseGeocode(pos.lat, pos.lng);
+    });
+
+    // Click anywhere on map to reposition pin
+    map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      marker.setLatLng([lat, lng]);
+      setLatLng({ lat, lng });
+      soundManager.playPing();
+      reverseGeocode(lat, lng);
+    });
+
+    miniMapInstanceRef.current = map;
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      map.remove();
+      miniMapInstanceRef.current = null;
+      miniMarkerRef.current = null;
+    };
+  }, [step]);
+
+  // Sync mini map view when latLng changes
+  useEffect(() => {
+    if (miniMapInstanceRef.current && miniMarkerRef.current) {
+      miniMarkerRef.current.setLatLng([latLng.lat, latLng.lng]);
+      miniMapInstanceRef.current.setView([latLng.lat, latLng.lng], 14, { animate: true });
+    }
+  }, [latLng]);
+
   const [isRecordingVoice, setIsRecordingVoice] = useState<boolean>(false);
   const [voiceRecordedText, setVoiceRecordedText] = useState<string>('');
   const [photoAttached, setPhotoAttached] = useState<boolean>(false);
@@ -117,30 +308,6 @@ export const CitizenReportModal: React.FC<CitizenReportModalProps> = ({
     setSelectedType(type);
     soundManager.playPing();
     setStep(2);
-  };
-
-  const handleUseCurrentLocation = () => {
-    setIsLocating(true);
-    soundManager.playPing();
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLatLng({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setAddress(`GPS Pinned: ${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E (Chennai Grid)`);
-          setIsLocating(false);
-          soundManager.playSuccess();
-        },
-        () => {
-          // Fallback to high-accuracy Chennai coordinate
-          setLatLng({ lat: 13.0418, lng: 80.2341 });
-          setAddress('Anna Salai, T Nagar, Chennai, Tamil Nadu');
-          setIsLocating(false);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      setIsLocating(false);
-    }
   };
 
   const handleToggleVoiceRecord = () => {
@@ -342,27 +509,127 @@ export const CitizenReportModal: React.FC<CitizenReportModalProps> = ({
                 </div>
               </div>
 
-              {/* Location Pinned Card */}
-              <div className="p-4 rounded-2xl bg-[#0c1426] border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-                    <MapPin className="w-4 h-4 text-red-500 animate-bounce" />
-                    <span>{t.currentLocation}</span>
+              {/* Interactive Location Command Card with Search, Map Preview & Quick Presets */}
+              <div className="p-4 rounded-2xl bg-[#0c1426] border border-white/15 space-y-3.5 shadow-lg">
+                
+                {/* Header: Title, Live Coordinates & Geolocation Trigger */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-red-600/30 border border-red-500/50 flex items-center justify-center text-red-400">
+                      <MapPin className="w-3.5 h-3.5 animate-bounce" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider block">
+                        Emergency Incident Location
+                      </span>
+                      <span className="text-[10px] font-mono text-cyan-400">
+                        {latLng.lat.toFixed(4)}° N, {latLng.lng.toFixed(4)}° E
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    onClick={handleUseCurrentLocation}
-                    disabled={isLocating}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/40 text-xs font-semibold transition-all"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    <span>{isLocating ? 'Locating...' : t.useMyLocation}</span>
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold tracking-wider">
+                      ● {locationStatus}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={isLocating}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-950/60 border border-red-400/50 transition-all active:scale-95"
+                      title="Pin my current GPS position automatically"
+                    >
+                      <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                      <span>{isLocating ? 'Acquiring GPS...' : 'Use My GPS'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/5 font-mono text-xs text-slate-300 flex items-center justify-between">
-                  <span>📍 {address}</span>
-                  <span className="text-[10px] text-emerald-400 font-bold">● GPS LOCKED</span>
+                {/* Editable Search & Location Input Bar */}
+                <form onSubmit={handleSearchLocation} className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <MapPin className="w-4 h-4 text-red-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        setLocationStatus('MANUALLY EDITING');
+                      }}
+                      placeholder="Type street, landmark, sector, or building name..."
+                      className="w-full bg-slate-900/95 border border-white/15 focus:border-red-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 font-medium focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isGeocoding}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/15 text-xs font-bold transition-all shrink-0 active:scale-95"
+                    title="Find address on map"
+                  >
+                    <Search className={`w-3.5 h-3.5 text-yellow-400 ${isGeocoding ? 'animate-spin' : ''}`} />
+                    <span>{isGeocoding ? 'Locating...' : 'Set / Find'}</span>
+                  </button>
+                </form>
+
+                {/* Interactive Leaflet Mini Map Preview (Tap to Move Pin) */}
+                <div className="relative rounded-xl overflow-hidden border border-white/15 bg-slate-950 shadow-inner">
+                  <div 
+                    ref={miniMapContainerRef} 
+                    className="w-full h-[180px] z-0 cursor-crosshair"
+                  />
+
+                  {/* Top Floating Helper Overlay */}
+                  <div className="absolute top-2 left-2 z-[400] pointer-events-none bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[10px] font-mono text-slate-200 flex items-center gap-1.5 shadow-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                    <span>Tap map or drag pin to relocate</span>
+                  </div>
+
+                  {/* Recenter Pin Indicator Bottom Right */}
+                  <div className="absolute bottom-2 right-2 z-[400]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (miniMapInstanceRef.current) {
+                          miniMapInstanceRef.current.setView([latLng.lat, latLng.lng], 15, { animate: true });
+                          soundManager.playPing();
+                        }
+                      }}
+                      className="bg-black/80 hover:bg-black p-1.5 rounded-lg border border-white/15 text-yellow-400 shadow-md text-[10px] font-mono flex items-center gap-1 transition-all"
+                      title="Center Map on Selected Coordinates"
+                    >
+                      <Crosshair className="w-3.5 h-3.5" />
+                      <span>Center Pin</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Quick Sector Preset Pills */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">
+                    <span>⚡ Quick Sector Presets</span>
+                    <span className="text-slate-500">Tap 1-click location</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto pr-1">
+                    {locationPresets.map((preset) => {
+                      const isActive = Math.abs(latLng.lat - preset.lat) < 0.005 && Math.abs(latLng.lng - preset.lng) < 0.005;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handleSelectPreset(preset)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold transition-all border ${
+                            isActive
+                              ? 'bg-red-600 text-white border-red-400 shadow-sm'
+                              : 'bg-slate-900/90 text-slate-300 border-white/10 hover:border-white/30 hover:text-white'
+                          }`}
+                        >
+                          📍 {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
               </div>
 
               {/* Description Input + Voice & Photo simulation */}
