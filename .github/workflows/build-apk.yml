@@ -12,6 +12,9 @@ jobs:
   build-apk:
     name: Build Android APK via Capacitor
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout Code
@@ -29,9 +32,6 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Project Dependencies
         run: npm ci
 
@@ -47,13 +47,11 @@ jobs:
       - name: Sync Web Code into Android Project
         run: npx cap sync android
 
-      - name: Grant Execute Permission to Gradle Wrapper
-        run: chmod +x android/gradlew
-
       - name: Build Debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename APK Output
         run: |
@@ -70,11 +68,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.0-apk
-          name: "RESQ Emergency Platform v1.0.0 (Android APK)"
+          tag_name: v1.0.${{ github.run_number }}
+          name: "RESQ Emergency Platform Build #${{ github.run_number }} (Android APK)"
           body: |
             ## 🚨 RESQ — Smart Emergency Response & Management Platform
-            ### Android APK Build
+            ### Android APK Direct Download
             
             Download the standalone Android `.apk` below:
             - **Filename:** `RESQ-Emergency-App.apk`
